@@ -147,7 +147,12 @@ async function fileExists(filePath) {
     }
 }
 
-app.listen(PORT, () => {
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
     console.log(`Serveur lancé sur http://localhost:${PORT}`);
     console.log(`Prêt à recevoir POST /analyze-repo-with-ai`);
-});
+  });
+}

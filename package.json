@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "start:open": "start http://localhost:3000 && node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,10 @@
   "dependencies": {
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "simple-git": "^3.28.0"
+    "simple-git": "^3.28.0",
+    "supertest": "^7.1.1"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
   }
 }
