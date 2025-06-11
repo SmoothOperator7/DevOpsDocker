@@ -1,0 +1,21 @@
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+    }
+    input, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-right: 1rem;
+      width: 400px;
+    }
+    button {
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 2rem;
+      white-space: pre-wrap;
+      background: #f4f4f4;
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
