@@ -1,9 +1,9 @@
 
-process.env.GROQ_API_KEY = 'fake-key-for-test';
+process.env.NODE_ENV = 'test';
+process.env.GROQ_API_KEY = 'fake-key';
 
 const request = require('supertest');
 const app = require('../src/index');
-process.env.GROQ_API_KEY = 'fake-key-for-test';
 
 
 

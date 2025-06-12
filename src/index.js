@@ -4,14 +4,16 @@ const simpleGit = require('simple-git');
 const path = require('path');
 const fs = require('fs/promises');
 const os = require('os');
+const NODE_ENV = process.env;
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-if (!GROQ_API_KEY) {
-    console.error('ERREUR : GROQ_API_KEY manquante dans le fichier .env');
-    process.exit(1);
+if (!GROQ_API_KEY && NODE_ENV !== 'test') {
+  console.error('ERREUR : GROQ_API_KEY manquante dans le fichier .env');
+  process.exit(1);
 }
 
 app.use(express.json());

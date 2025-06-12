@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout du code
+      - name:  Vérif du code
         uses: actions/checkout@v3
 
-      - name: 🟢 Setup Node.js
+      - name:  Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18  # ou ta version
+          node-version: 18  
 
-      - name: 📦 Installer les dépendances
+      - name: Installer les dépendances
         run: npm install
 
-      - name: 🧪 Lancer les tests
+      - name: Lancer les tests
         run: npm test
