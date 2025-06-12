@@ -1,5 +1,8 @@
 const request = require('supertest');
 const app = require('../src/index');
+process.env.GROQ_API_KEY = 'fake-key-for-test';
+
+
 
 jest.mock('fs/promises');
 jest.mock('simple-git', () => {
