@@ -1,13 +1,12 @@
+version: '3.8'
 services:
   backend:
     container_name: devops-analyzer-backend
     build: .
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
-    working_dir: /app
-    command: ["node", "src/index.js"]
-    env_file:
-      - .env
+    environment:
+      - NODE_ENV=development
     restart: unless-stopped
+
+ 

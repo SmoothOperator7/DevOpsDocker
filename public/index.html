@@ -1,17 +1,119 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Analyseur DevOps / CI/CD</title>
-  <link rel="stylesheet" href="/css/style.css" />
+<meta charset="UTF-8" />
+<title>Analyseur DevOpssssss / CI/CD</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
 </head>
-<body>
-  <h2>Analyse d’un dépôt GitHub</h2>
-  <input type="text" id="repoUrl" placeholder="https://github.com/username/repo" />
-  <button id="analyzeBtn">Analyser</button>
+<body class ="flex flex-col min-h screen bg-gray-900 text-white">
+<header class="bg-gray-800 text-white p-4 shadow-md">
+  <div class="container mx-auto flex justify-between items-center px-6">
+    <div class="flex items-center">
+      <span class="text-3xl">🔬</span>
+      <h1 class="text-2xl font-bold">DevOps Analyzer</h1>
+    </div>
+    <nav class="hidden md:flex gap-6">
+      <a href="#features" class="text-gray-300 hover:text-white transition">Fonctionnalités</a>
+      <a href="#about" class="text-gray-300 hover:text-white transition">À propos</a>
+    </nav>
+<button class="md:hidden text-gray-300 hover:text-white">☰</button>
+</div>
+    </header>
 
-  <div id="result">Veuillez saisir un lien GitHub pour commencer l'analyse.</div>
+<main class="flex-1 py-20 bg-gradient-to-r from-blue-900 to-indigo-900 text-white">
+  <div class="container mx-auto text-center px-6">
+    <h2 class="text-6xl font-extrabold mb-8">Analysez votre projet en quelques secondes</h2>
+    <p class="text-2xl mb-10">Obtenez un rapport détaillé sur la qualité de votre CI/CD, Docker, tests et bien plus encore.</p>
+    <form class="flex flex-col sm:flex-row justify-center gap-4 max-w-2xl mx-auto">
+      <input type="text" id="repoUrlInput" placeholder="https://github.com/username/repository" class="flex-1 border-0 focus:ring-4 focus:ring-blue-400/50 bg-white/90 text-gray-900 rounded-l-full px-6 py-4 text-lg shadow-md transition w-full sm:w-auto min-w-0" />
+      <button id="analyzeBtn" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-r-full text-lg font-semibold shadow-md hover:from-blue-700 hover:to-indigo-700 transition">Analyser</button>
+    </form>
+  </div>
+  </main>
 
-  <script src="/js/script.js"></script>
+  <section id="analysisResultsSection" class="py-10 bg-gray-800 text-white">
+    <div class="container mw-auto px-6 text-center">
+      <div id="resultOutput">
+      </div>
+    </div>
+  </section>
+
+<section id="features" class="py-10 bg-gray-800 text-white">
+  <div class="container mx-auto px-6">
+    <h2 class="text-4xl font-bold text-white mb-12 text-center">Fonctionnalités Clés</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+  <div class="bg-gray-700 shadow-lg rounded p-8 text-center">
+    <span class="text-blue-500 text-5xl">🛠️</span>
+    <h3 class="text-2xl font-bold mt-4">Clonage du dépôt</h3>
+    <p class="text-gray-300 mt-2">Clonage du dépôt via une URL GitHub.</p>
+  </div>
+  <div class="bg-gray-700 shadow-lg rounded p-8 text-center">
+    <span class="text-blue-500 text-5xl">✅</span>
+    <h3 class="text-2xl font-bold mt-4">Test unitaires</h3>
+    <p class="text-gray-300 mt-2">Exécution des tests unitaires.</p>
+  </div>
+<div class="bg-gray-700 shadow-lg rounded p-8 text-center"> 
+    <span class="text-yellow-500 text-5xl">🔍</span>
+    <h3 class="text-2xl font-bold mt-4">Pipelines CI/CD</h3>
+          <p class="text-gray-300 mt-2">Détection des pipelines CI/CD.</p>
+
+</div>
+  <div class="bg-gray-700 shadow-lg rounded p-8 text-center">
+    <span class="text-purple-500 text-5xl">🐳</span>
+    <h3 class="text-2xl font-bold mt-4">Docker</h3>
+    <p class="text-gray-300 mt-2">Vérification Docker.</p>
+  </div>
+  <div class="bg-gray-700 shadow-lg rounded p-8 text-center">
+    <span class="text-red-500 text-5xl">📊</span>
+    <h3 class="text-2xl font-bold mt-4">Évaluation</h3>
+    <p class="text-gray-300 mt-2">Évaluation basée sur des critères prédéfinis.</p>
+  </div>
+  <div class="bg-gray-700 shadow-lg rounded p-8 text-center">
+    <span class="text-indigo-500 text-5xl">📂</span>
+    <h3 class="text-2xl font-bold mt-4">Rapports</h3>
+    <p class="text-gray-300 mt-2">Génération de rapports en JSON/CSV.</p>
+    </span>
+  </div>
+</div>
+</div>
+</section>
+    
+<section id="about" class="py-20 bg-gray-900">
+<div class="container mx-auto px-6 max-w-3xl text-center">
+<h2 class="text-4xl font-bold text-white mb-12">À propos</h2>
+<p class="text-gray-300 text-xl mb-8">
+  <span class="font-semibold text-white">DevOps Analyzer</span> est un outil développé dans le cadre d'un projet scolaire pour analyser automatiquement des projets. Son objectif&nbsp;? Vérifier les bonnes pratiques en testant&nbsp;:
+</p>
+<ul class="text-left text-gray-200 text-lg mb-8 mx-auto max-w-xl space-y-3">
+  <li><span class="font-bold text-blue-400">•</span> La présence et le fonctionnement des pipelines CI/CD</li>
+  <li><span class="font-bold text-blue-400">•</span> La qualité du code via les tests unitaires</li>
+  <li><span class="font-bold text-blue-400">•</span> Les configurations Docker</li>
+  <li><span class="font-bold text-blue-400">•</span> La maintenabilité du projet</li>
+</ul>
+<div class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg inline-block">
+  <h3 class="text-xl font-semibold text-blue-300 mb-2">Spécificités :</h3>
+  <ul class="text-gray-200 text-left space-y-2">
+    <li><span class="text-green-400 font-bold">✔</span> Génère des rapports détaillés au format JSON</li>
+    <li><span class="text-green-400 font-bold">✔</span> Rapports faciles à lire, à exploiter et à partager</li>
+    <li><span class="text-green-400 font-bold">✔</span> Génère une évaluation automatique basée sur l'analyse du projet</li>
+  </ul>
+</div>
+<p class="text-gray-400 text-lg italic">Un outil par des étudiants, pour des étudiants – parce que l'apprentissage passe aussi par l'auto-évaluation.</p>
+</div>
+</section>
+
+<footer class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white py-10 mt-auto">
+<div class="container mx-auto text-center px-6">
+<p class="text-lg font-semibold">&copy; 2025 DevOps Analyzer</p>
+<div class="flex justify-center mt-4">
+  <a href="#" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full text-lg font-medium shadow transition">
+    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.78 2.73 1.27 3.4.97.11-.75.41-1.27.74-1.56-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 2.9-.39c.98 0 1.97.13 2.9.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.7.42.36.79 1.09.79 2.2 0 1.59-.01 2.87-.01 3.26 0 .31.21.68.8.56C20.71 21.39 24 17.08 24 12c0-6.27-5.23-11.5-12-11.5z"/></svg>
+    GitHub
+  </a>
+</div>
+</div>
+</footer>
+<script src="/js/script.js"></script>
 </body>
 </html>
