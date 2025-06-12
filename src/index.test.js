@@ -1,7 +1,6 @@
 const request = require('supertest');
 const app = require('../src/index');
 
-// Mocks
 jest.mock('fs/promises');
 jest.mock('simple-git', () => {
   return () => ({
@@ -31,7 +30,6 @@ describe('POST /analyze-repo-with-ai', () => {
   });
 
   it('retourne une analyse simulée', async () => {
-    // Préparation des fichiers simulés
     fs.readdir.mockResolvedValue([
       { name: 'fichier.js', isDirectory: () => false }
     ]);
