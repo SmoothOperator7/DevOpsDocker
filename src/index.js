@@ -2,18 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const simpleGit = require('simple-git');
 const path = require('path');
-const fs = require('fs/promises');
-const os = require('os');
+const fileSystem = require('fs/promises');
+const operatingSystem = require('os');
+const fetch = require('node-fetch');
 const NODE_ENV = process.env;
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 if (!GROQ_API_KEY && NODE_ENV !== 'test') {
   console.error('ERREUR : GROQ_API_KEY manquante dans le fichier .env');
   process.exit(1);
+}
+
+if (!GITHUB_TOKEN) {
+    console.error('ERREUR : GITHUB_TOKEN manquant');
+    process.exit(1);
 }
 
 app.use(express.json());
@@ -27,80 +34,203 @@ app.use((req, res, next) => {
 });
 
 async function getAllFiles(dirPath, allFiles = []) {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    const entries = await fileSystem.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
         if (entry.isDirectory()) {
             await getAllFiles(fullPath, allFiles);
-        } else if (/\.(js|ts|jsx|tsx|py|java|json|html|css)$/i.test(entry.name)) {
-            allFiles.push(fullPath);
         }
+        else if (
+        /\.(js|ts|jsx|tsx|py|java|json|html|css|yml|yaml)$/i.test(entry.name) ||
+        entry.name.toLowerCase() === 'Dockerfile' ||
+        entry.name.toLowerCase() === 'docker-compose.yml'
+    ) {
+        allFiles.push(fullPath);
+    }
+
     }
     return allFiles;
 }
 
+async function getGitHubAPI(gitHubRepoUrl) 
+{
+    const [, , , owner, repo] = gitHubRepoUrl.split('/');
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+    const headers = {
+        'User-Agent': 'ci-analyzer',
+        'Authorization': `token ${GITHUB_TOKEN}`
+    };
+    const repoInfo = await (await fetch(apiUrl, { headers })).json();
+    const branches = await (await fetch(`${apiUrl}/branches`, { headers })).json();
+    const workflows = await (await fetch(`${apiUrl}/actions/workflows`, { headers })).json();
+    const commits = await (await fetch(`${apiUrl}/commits?per_page=100`, { headers })).json();
+
+    return {
+        repoName: repoInfo.name,
+        branches: branches.map(b => b.name),
+        workflows: workflows.workflows?.map(w => w.name),
+        commits: commits.map(commit => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            author: commit.commit.author.name,
+            date: commit.commit.author.date
+        }))
+    };
+}
+
+
+async function fileExists(filePath) {
+    try {
+        await fileSystem.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function findExpressEntryFile(repoDir) {
+    const files = await getAllFiles(repoDir);
+    for (const file of files) {
+        if (!file.endsWith('.js')) continue;
+        const content = await fileSystem.readFile(file, 'utf-8');
+        if (content.includes('express()') && content.includes('app.listen')) {
+            return file;
+        }
+    }
+    return null;
+}
+
+
+async function injectHealthCheck(filePath) {
+    if (!filePath) {
+      console.log("[Injection] Échec : index.js introuvable.");
+      return false;
+    }
+
+    try {
+        let content = await fileSystem.readFile(filePath, 'utf-8');
+
+        if (!content.includes('/health')) {
+            content += '\napp.get("/health", (req, res) => res.send("OK"));\n';
+            await fileSystem.writeFile(filePath, content, 'utf-8');
+            console.log("[Injection] Route /health ajoutée.");
+            return true;
+        } else {
+            console.log("[Injection] Route /health déjà présente.");
+            return false;
+        }
+    } catch (err) {
+        console.log("[Injection] Échec :", err.message);
+        return false;
+    }
+}
 app.post('/analyze-repo-with-ai', async (req, res) => {
-    const { gitHubRepoUrl, instructions } = req.body;
+    const { gitHubRepoUrl } = req.body;
 
     if (!gitHubRepoUrl) {
         return res.status(400).json({ error: 'Le lien GitHub (gitHubRepoUrl) est requis.' });
     }
 
-    const userInstructions = instructions || "Fais une revue de code complète : structure, qualité, clarté, et détecte l'utilisation potentielle d'une IA.";
     const MAX_FILES = 5;
     const MAX_FILE_LENGTH = 3000;
     let repoDir;
 
     try {
-        repoDir = path.join(os.tmpdir(), `repo-analysis-${Date.now()}`);
-        await fs.mkdir(repoDir, { recursive: true });
+         const gitData = await getGitHubAPI(gitHubRepoUrl);
+        repoDir = path.join(operatingSystem.tmpdir(), `repo-analysis-${Date.now()}`);
+        await fileSystem.mkdir(repoDir, { recursive: true });
 
         const git = simpleGit();
         await git.clone(gitHubRepoUrl, repoDir);
         console.log(`Clonage OK, Repo cloné dans : ${repoDir}`);
+        
+        const entryFile = await findExpressEntryFile(repoDir);
+        const healthOK = await injectHealthCheck(entryFile);
 
         const allFiles = await getAllFiles(repoDir);
         console.log(`[Fichiers trouvés] ${allFiles.length} fichiers détectés.`);
         const selectedFiles = allFiles.slice(0, MAX_FILES);
 
+        const hasDockerfile = allFiles.some(file => path.basename(file).toLowerCase() === 'dockerfile');
+        const hasCompose = allFiles.some(file => path.basename(file).toLowerCase() === 'docker-compose.yml');
+        console.log(`[Docker] Dockerfile : ${hasDockerfile}, Docker-compose : ${hasCompose}`);
+        if (!hasDockerfile && !hasCompose) {
+            console.log("[Docker] Aucun fichier Dockerfile ou docker-compose.yml trouvé.");
+        }
+
         let allCode = '';
-        for (const file of selectedFiles) {
-            let content = await fs.readFile(file, 'utf-8');
+        for (const file of selectedFiles) 
+        {
+            let content = await fileSystem.readFile(file, 'utf-8');
             if (content.length > MAX_FILE_LENGTH) {
                 content = content.slice(0, MAX_FILE_LENGTH) + '\n// [contenu tronqué]';
             }
             allCode += `\nFichier : ${file}\n\`\`\`\n${content}\n\`\`\`\n`;
         }
+        const summary = {
+                    repoName: gitData.repoName,
+                    branches: gitData.branches,
+                    workflows: gitData.workflows,
+                    commitCount: gitData.commits.length,
+                    files: selectedFiles.map(file => path.relative(repoDir, file)),
+                    docker: {
+                        hasDockerfile,
+                        hasCompose
+                    },
+                    healthInjected: healthOK,
+                };
 
 const prompt = `
-Tu es un outil d’analyse automatique spécialisé en DevOps et CI/CD.
+Nous communiquons en français.
+Tu es un outil d’analyse DevOps/CI-CD. Analyse ce code extrait d’un dépôt GitHub.
 
-Ta mission : faire une revue technique, concise et objective en français, 
-sans détailler node_modules ou les fichiers de configuration, 
-mais en te concentrant sur les fichiers principaux du projet.
+Objectifs :
+- Évaluer la qualité du code (lisibilité, structure, logique)
+- Vérifier la présence d’un pipeline CI/CD fonctionnel
+- Détecter si du code a été généré par une IA
+- Juger si le projet est maintenable (testé avec une route /health injectée)
 
-Barème d’analyse (/20) :
-- Analyse d’outils et de tests sur dépôt externe (7 pts)
-- Pipeline CI/CD complet : build, test, déploiement (5 pts)
-- Capacité à ajouter la mini-feature demandée (3 pts)
-- Clarté de l’historique Git et respect des bonnes pratiques (3 pts)
-- Documentation et expérience utilisateur (CLI ou Web) (2 pts)
+Barème (/20) :
+1. Compréhension du code + pipeline CI/CD : /13
+2. Qualité de l’environnement (structure, lisibilité, Docker, .env) : /4
+3. Pipeline CI/CD (build, test, déploiement) : /3
 
-Procède ainsi :
-1. Analyse le code extrait ci-dessous et évalue chaque critère sur maximum 2 lignes.
-2. Donne un score sur 20 selon le barème.
-3. Repère les indices de génération IA : nommages génériques, incohérences ou duplications, 
-    gestion d’erreur superficielle, commentaires ou exemples non adaptés, 
-    non-respect des conventions.
-    Signale toute absence de contextualisation ou adaptation au projet.
-    et donne un pourcentage de code générées par l'IA.
+Détection IA :
+Signale toute trace suspecte (noms vagues, commentaires génériques, copier-coller, logique douteuse).  
+Donne un verdict clair (Oui / Non / Peut-être), un % estimé, et une justification.
 
-    Sois strict et intransigeant dans ta détection : considère tout indice comme une preuve forte de génération IA, sans nuance ni hésitation. N’atténue pas tes remarques : signale systématiquement chaque élément suspect comme généré par IA, même en cas de doute.
-    
+Les métadonnées suivantes sont fiables et générées automatiquement par un outil d’analyse :
+- Dockerfile présent : ${hasDockerfile}
+- Docker-compose présent : ${hasCompose}
+
+Même si ces fichiers ne sont pas visibles ci-dessous, considère leur existence pour ta notation.
+
+Format de la réponse :
+  "Difficulté estimée": "Débutant" | "Avancé" (+ % difficulté),
+  "Compréhension du code": "X / 13",
+  "Qualité de l’environnement": "X / 4",
+  "Note pipeline CI/CD": "X / 3",
+  "IA détectée": "Oui" | "Non" | "Peut-être",
+  "Pourcentage IA": "X %",
+  "Justification IA": "..."
+
+Résumé du dépôt :
+- Lien GitHub : ${gitHubRepoUrl}
+- Nom : ${gitData.repoName}
+- Branches : ${JSON.stringify(gitData.branches)}
+- Workflows : ${JSON.stringify(gitData.workflows)}
+- Commits : ${gitData.commits.length}
+- Dockerfile : ${hasDockerfile}
+- Docker-compose : ${hasCompose}
+- Route /health injectée : ${healthOK}
+- Fichiers analysés : ${JSON.stringify(selectedFiles.map(f => path.relative(repoDir, f)))}
+
+Pour finir une note globale sur 20, en expliquant les points forts et faibles du projet.
 Voici l’extrait de code à analyser :
 ${allCode}
 `;
-        console.log("[Prompt envoyé à l'IA]", prompt);
+
+        //console.log("[Prompt envoyé à l'IA]", prompt);
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -115,7 +245,8 @@ ${allCode}
             }),
         });
 
-        if (!response.ok) {
+        if (!response.ok) 
+        {
             const errData = await response.json();
             throw new Error(`Erreur API Groq (${response.status}) : ${JSON.stringify(errData)}`);
         }
@@ -124,34 +255,30 @@ ${allCode}
         const result = data.choices[0]?.message?.content || 'Réponse IA vide.';
 
         res.status(200).json({
-            message: `Analyse IA réussie. ${MAX_FILES} fichiers max analysés.`,
+            message: `Analyse IA réussie. ${MAX_FILES} fichiers max analysés.`, 
+            summary,
             aiAnalysis: result,
         });
 
-    } catch (err) {
+    } catch (err) 
+    {
         console.error('[ERREUR]', err);
         res.status(500).json({ error: 'Erreur lors de l’analyse du dépôt.', details: err.message });
     } 
-    finally {
-        if (repoDir && await fileExists(repoDir)) {
-            await fs.rm(repoDir, { recursive: true, force: true });
+    finally 
+    {
+        if (repoDir && await fileExists(repoDir)) 
+            {
+            await fileSystem.rm(repoDir, { recursive: true, force: true });
             console.log('[Nettoyage OK] Dossier supprimé.');
         }
     }
 });
 
-async function fileExists(filePath) {
-    try {
-        await fs.access(filePath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 module.exports = app;
 
-if (require.main === module) {
+if (require.main === module) 
+{
   app.listen(PORT, () => {
     console.log(`Serveur lancé sur http://localhost:${PORT}`);
     console.log(`Prêt à recevoir POST /analyze-repo-with-ai`);
