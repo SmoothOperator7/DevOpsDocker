@@ -18,7 +18,7 @@ if (!GROQ_API_KEY && NODE_ENV !== 'test') {
   process.exit(1);
 }
 
-if (!GITHUB_TOKEN) {
+if (!GITHUB_TOKEN && NODE_ENV !== 'test' ) {
     console.error('ERREUR : GITHUB_TOKEN manquant');
     process.exit(1);
 }
@@ -54,6 +54,7 @@ async function getAllFiles(dirPath, allFiles = []) {
 
 async function getGitHubAPI(gitHubRepoUrl) 
 {
+    try {
     const [, , , owner, repo] = gitHubRepoUrl.split('/');
     const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
     const headers = {
@@ -66,9 +67,9 @@ async function getGitHubAPI(gitHubRepoUrl)
     const commits = await (await fetch(`${apiUrl}/commits?per_page=100`, { headers })).json();
 
     return {
-        repoName: repoInfo.name,
-        branches: branches.map(b => b.name),
-        workflows: workflows.workflows?.map(w => w.name),
+        repoName: repoInfo.name || 'Inconnu',
+        branches: branches.map(branche => branche.name),
+        workflows: workflows.workflows?.map(workflow => workflow.name),
         commits: commits.map(commit => ({
             sha: commit.sha,
             message: commit.commit.message,
@@ -76,6 +77,15 @@ async function getGitHubAPI(gitHubRepoUrl)
             date: commit.commit.author.date
         }))
     };
+    } catch (err) {
+    console.error('[GitHub API ERROR]', err.message);
+    return {
+      repoName: 'Inconnu',
+      branches: [],
+      workflows: [],
+      commits: []
+    };
+  }
 }
 
 
@@ -214,7 +224,7 @@ Format de la réponse :
   "Pourcentage IA": "X %",
   "Justification IA": "..."
 
-Résumé du dépôt :
+Renvoie moi également le Résumé du dépôt :
 - Lien GitHub : ${gitHubRepoUrl}
 - Nom : ${gitData.repoName}
 - Branches : ${JSON.stringify(gitData.branches)}
