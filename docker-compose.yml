@@ -8,5 +8,8 @@ services:
     environment:
       - NODE_ENV=development
     restart: unless-stopped
+    volumes:
+      - backend-data:/app/data
 
- 
+volumes:
+  backend-data:
