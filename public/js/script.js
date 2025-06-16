@@ -27,7 +27,11 @@ analyzeBtn.addEventListener("click", async (e) => {
 
   try {
     console.log("try chargé"); 
-    const response = await fetch("http://localhost:3000/analyze-repo-with-ai", {
+    const API_URL = window.location.hostname === "localhost"
+      ? "http://localhost:3000"
+      : "https://devopsdocker.onrender.com";
+
+    const response = await fetch(`${API_URL}/analyze-repo-with-ai`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -35,7 +39,7 @@ analyzeBtn.addEventListener("click", async (e) => {
         instructions: "Fais une revue complète CI/CD & DevOps en français. Donne un score et Analyse ce code généré par une IA, identifie et explique toutes les incohérences, erreurs ou mauvaises pratiques, puis propose des corrections claires."
       })
     });
-    
+
     const data = await response.json();
 
     resultOutputDiv.innerHTML = ''; 
