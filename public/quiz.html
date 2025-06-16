@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Générateur de QCM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-10">
+  <h1 class="text-3xl font-bold mb-6">Génère un QCM à partir d’un dépôt GitHub</h1>
+  <form id="quizForm" class="mb-6 flex gap-4">
+    <input id="quizRepoUrl" class="px-4 py-2 text-black flex-1" type="text" placeholder="https://github.com/username/repo" />
+    <button class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded">Générer</button>
+  </form>
+  <div id="quizResults" class="space-y-6"></div>
+  <script src="/js/quiz.js"></script>
+</body>
+</html>

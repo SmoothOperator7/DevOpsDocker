@@ -5,6 +5,7 @@ const path = require('path');
 const fileSystem = require('fs/promises');
 const operatingSystem = require('os');
 const fetch = require('node-fetch');
+
 const NODE_ENV = process.env;
 
 
@@ -33,6 +34,7 @@ app.use((req, res, next) => {
     next();
 });
 
+// Fonction pour récupérer tous les fichiers d'un répertoire
 async function getAllFiles(dirPath, allFiles = []) {
     const entries = await fileSystem.readdir(dirPath, { withFileTypes: true });
     for (const entry of entries) {
@@ -134,6 +136,8 @@ async function injectHealthCheck(filePath) {
         return false;
     }
 }
+
+// Partie pour analyser un dépôt GitHub avec l'IA
 app.post('/analyze-repo-with-ai', async (req, res) => {
     const { gitHubRepoUrl } = req.body;
 
@@ -281,6 +285,115 @@ ${allCode}
             {
             await fileSystem.rm(repoDir, { recursive: true, force: true });
             console.log('[Nettoyage OK] Dossier supprimé.');
+        }
+    }
+});
+
+
+//Partie pour générer un QCM à partir du code d’un dépôt GitHub
+const nodeFetch = require('node-fetch');
+
+app.post('/generate-quiz', async (req, res) => {
+    const { gitHubRepoUrl } = req.body;
+    if (!gitHubRepoUrl) {
+        return res.status(400).json({ error: 'Le lien GitHub est requis.' });
+    }
+
+    const MAX_FILES = 5;
+    const MAX_FILE_LENGTH = 3000;
+    const repoDir = path.join(operatingSystem.tmpdir(), `quiz-analysis-${Date.now()}`);
+
+    try {
+        await fileSystem.mkdir(repoDir, { recursive: true });
+        const git = simpleGit();
+        await git.clone(gitHubRepoUrl, repoDir);
+
+        const allFiles = await getAllFiles(repoDir);
+        const selectedFiles = allFiles.slice(0, MAX_FILES);
+
+        let allCode = '';
+        for (const file of selectedFiles) {
+            let content = await fileSystem.readFile(file, 'utf-8');
+            if (content.length > MAX_FILE_LENGTH) {
+                content = content.slice(0, MAX_FILE_LENGTH);
+            }
+            allCode += `\nFichier : ${file}\n\n\`\`\`\n${content}\n\`\`\`\n`;
+        }
+
+        const prompt = `
+Tu es un formateur en DevOps.
+
+Lis le code ci-dessous, et génère un tableau JSON contenant 10 questions à choix multiple (QCM) pour tester la compréhension du développeur.
+
+Tu dois OBLIGATOIREMENT renvoyer uniquement du JSON valide, au format suivant :
+[
+  {
+    "question": "Quel est le rôle de la route /health ?",
+    "choices": ["Elle vérifie l’état du serveur", "Elle teste le port 3000", "Elle supprime le cache"],
+    "answer": "Elle vérifie l’état du serveur"
+  },
+  ...
+]
+Voici le code à analyser :
+${allCode}
+`;
+
+        const response = await nodeFetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${GROQ_API_KEY}`,
+            },
+            body: JSON.stringify({
+                model: 'llama3-70b-8192',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.4,
+                max_tokens: 1500
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`GROQ API error: ${JSON.stringify(error)}`);
+        }
+
+        const data = await response.json();
+        let output = data.choices?.[0]?.message?.content || '';
+
+
+        const jsonMatch = output.match(/(\[.*\])/s);
+        if (jsonMatch) 
+        {
+            output = jsonMatch[1];
+        } 
+        else 
+        {
+            throw new Error("Aucun tableau JSON détecté dans la réponse IA.");
+        }
+
+        output = output.replace(/,\s*"[^"]*"\s*(?=})/g, '');
+
+        let quiz;
+        try
+        {
+            quiz = JSON.parse(output);
+        } catch (err) {
+            console.error('JSON invalide renvoyé par l’IA :', output);
+            return res.status(500).json({ error: "Réponse IA non valide (JSON attendu)", details: err.message });
+        }
+
+        res.json({ quiz });
+
+    } 
+    catch (err) 
+    {
+        console.error('[ERREUR GENERATION QCM]', err);
+        res.status(500).json({ error: 'Erreur génération QCM', details: err.message });
+    } 
+    finally 
+    {
+        if (repoDir && await fileExists(repoDir)) {
+            await fileSystem.rm(repoDir, { recursive: true, force: true });
         }
     }
 });
