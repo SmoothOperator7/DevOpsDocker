@@ -36,7 +36,7 @@ analyzeBtn.addEventListener("click", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         gitHubRepoUrl: repoUrl,
-        instructions: "Fais une revue complète CI/CD & DevOps en français. Donne un score et Analyse ce code généré par une IA, identifie et explique toutes les incohérences, erreurs ou mauvaises pratiques, puis propose des corrections claires."
+        //instructions: "Fais une revue complète CI/CD & DevOps en français. Donne un score et Analyse ce code généré par une IA, identifie et explique toutes les incohérences, erreurs ou mauvaises pratiques, puis propose des corrections claires."
       })
     });
 
